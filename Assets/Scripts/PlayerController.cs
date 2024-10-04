@@ -4,11 +4,23 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public float MovmentSpeed = 2.5f;
+    public float MovmentSpeed = 4.0f;
 
-    public float JumpForce = 4.5f;
+    public float SprintSpeed = 6.0f;
+
+    public float JumpForce = 5.0f;
+
+    public float RotationSmothing = 20f;
+
+    public float MouseSensitivity = 2.5f;
+
+    public GameObject HandMeshes;
+
+    private GameManager _GameManager;
 
     private Rigidbody _Rigidbody;
+
+    private float pitch, yaw;
 
     private bool IsGrounded;
 
@@ -17,6 +29,9 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         _Rigidbody = GetComponent<Rigidbody>();
+        _GameManager = FindObjectOfType<GameManager>();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     private void Jump()
@@ -39,13 +54,34 @@ public class PlayerController : MonoBehaviour
         return _Rigidbody.transform.position + Move * Time.fixedDeltaTime * MovmentSpeed;
     }
 
+    private Vector3 CalculateSprint()
+    {
+        float HorizontalDirection = Input.GetAxis("Horizontal");
+        float VerticalDirection = Input.GetAxis("Vertical");
+
+        Vector3 Move = transform.right * HorizontalDirection + transform.forward * VerticalDirection;
+
+        return _Rigidbody.transform.position + Move * Time.fixedDeltaTime * SprintSpeed;
+    }
+
     private void FixedUpdate()
     {
         GroundCheck();
 
-        if (Input.GetKey(KeyCode.Space) && IsGrounded) Jump();
+        if (Input.GetKey(KeyCode.Space) && IsGrounded)
+            Jump();
 
-        _Rigidbody.MovePosition(CalculateMovment());
+        if (Input.GetKey(KeyCode.LeftShift) && !_GameManager.IsStaminaRestoring && _GameManager.Stamina > 0)
+        {
+            _GameManager.SpendStamina();
+            _Rigidbody.MovePosition(CalculateSprint());
+        }
+        else
+        {
+            _Rigidbody.MovePosition(CalculateMovment());
+        }
+
+        SetRotation();
     }
 
     private void OnDrawnGizmosSelected()
@@ -54,4 +90,20 @@ public class PlayerController : MonoBehaviour
         Gizmos.DrawLine(transform.position, transform.position + (Vector3.down * DistationToGround));
     }
 
+    public void SetRotation()
+    {
+        yaw += Input.GetAxis("Mouse X") * MouseSensitivity;
+        pitch -= Input.GetAxis("Mouse Y") * MouseSensitivity;
+
+        pitch = Mathf.Clamp(pitch, -60, 90);
+
+        Quaternion SmoothRotation = Quaternion.Euler(pitch, yaw, 0);
+
+        HandMeshes.transform.rotation = Quaternion.Slerp(HandMeshes.transform.rotation, SmoothRotation,
+            RotationSmothing * Time.fixedDeltaTime);
+
+        SmoothRotation = Quaternion.Euler(0, yaw, 0);
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, SmoothRotation, RotationSmothing * Time.fixedDeltaTime);
+    }
 }
