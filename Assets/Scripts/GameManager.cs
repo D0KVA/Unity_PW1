@@ -41,4 +41,20 @@ public class GameManager : MonoBehaviour
     {
         StaminaCheck();
     }
+
+    public void Healing(int HealthPointCount)
+    {
+        if (Health + HealthPointCount >= MaxHealth) Health = MaxHealth;
+        else Health += HealthPointCount;
+
+        Debug.Log("HP:" + Health);
+    }
+
+    public void TakeDamage(int damage)
+    {
+        if (Health <= 0) return;
+        Health -= damage;
+        if (Health < 0) Health = 0;
+        Debug.Log("HP после урона: " + Health);
+    }
 }
